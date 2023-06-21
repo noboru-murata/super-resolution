@@ -1,0 +1,594 @@
+% Created 2023-06-21 Wed 17:47
+% Intended LaTeX compiler: pdflatex
+\documentclass[fleqn,aspectratio=1610]{beamer}
+\author{Noboru Murata}
+\date{\today}
+\title{Image Super-Resolution with Sparse Coding}
+\subtitle{image representaion and registration}
+\usepackage[toc=none]{mytalk}
+\addbibresource{papers.bib}
+\graphicspath{{figs/}{refs/}{figs/tentou/}{figs/lena/}{figs/cameraman/}{figs/flower/}{figs/girl/},{figs/parthenon/}{figs/macarthur/}{figs/samurai/}{figs/heading/}}
+\DeclareGraphicsExtensions{.pdf,.png,.eps,.jpg}
+\institute{\url{https://noboru-murata.github.io/}}
+\hypersetup{
+ pdfauthor={Noboru Murata},
+ pdftitle={Image Super-Resolution with Sparse Coding},
+ pdfkeywords={multi-frame super-resolution},
+ pdfsubject={based on Kato et al (20/20), https://doi.org/10.1162/089976604323057452},
+ pdfcreator={Emacs 28.2 (Org mode 9.6.4)}, 
+ pdflang={English}}
+\begin{document}
+
+\maketitle
+\begin{frame}{Outline}
+\tableofcontents
+\end{frame}
+
+
+\section{Introduction}
+\label{sec:org808e638}
+\subsection{background}
+\label{sec:org01d85fc}
+\begin{frame}[label={sec:org1cbfcbf}]{Background}
+request for image processing:
+\begin{itemize}
+\item development of new devices
+\item re-mastering of histrical images
+\end{itemize}
+\begin{center}
+\includegraphics[page=2,width=.9\linewidth,%
+trim=110 580 110 55,clip]{Kato_etal2015}
+\end{center}
+\end{frame}
+
+\begin{frame}[label={sec:org49b9069}]{Image Super-Resolution}
+\begin{itemize}
+\item problem:
+\begin{itemize}
+\item restore a clear image from low-resolution images
+\item consider degradation caused by
+\begin{itemize}
+\item noise
+\item blur
+\item down-sampling
+\end{itemize}
+\end{itemize}
+\item typical setup:
+\begin{itemize}
+\item single-frame: one low-resolution image
+\item \alert{multi-frame}: 
+multiple low-resolution images with different degradation
+processes
+\end{itemize}
+\item typical approaches:
+\begin{itemize}
+\item model-based: e.g. random Markov field
+\item \alert{example-based}: e.g. sparse representation
+\end{itemize}
+\end{itemize}
+\end{frame}
+
+\subsection{single-frame vs multi-frame}
+\label{sec:orgea51f85}
+\begin{frame}[label={sec:org9a01b38}]{Single-Frame vs Multi-Frame}
+\begin{columns}
+\begin{column}{0.43\columnwidth}
+\begin{center}
+\includegraphics[page=3,width=.95\textwidth]{sr_example} \\[0pt]
+single-frame super-resolution
+\end{center}
+\end{column}
+\begin{column}{0.57\columnwidth}
+\begin{center}
+\includegraphics[page=4,width=.95\textwidth]{sr_example} \\[0pt]
+multi-frame super-resolution
+\end{center}
+\end{column}
+\end{columns}
+\end{frame}
+
+\begin{frame}[label={sec:org2ef4483}]{Multi-Frame Image Super-Resolution}
+\begin{center}
+\parbox[c]{.56\textwidth}{
+  \includegraphics[page=1,width=.18\textwidth]{tentou_lr}
+  \includegraphics[page=2,width=.18\textwidth]{tentou_lr}
+  \includegraphics[page=3,width=.18\textwidth]{tentou_lr}\\
+  \includegraphics[page=4,width=.18\textwidth]{tentou_lr}
+  \includegraphics[page=5,width=.18\textwidth]{tentou_lr}
+  \includegraphics[page=6,width=.18\textwidth]{tentou_lr}\\
+  \includegraphics[page=7,width=.18\textwidth]{tentou_lr}
+  \includegraphics[page=8,width=.18\textwidth]{tentou_lr}
+  \includegraphics[page=9,width=.18\textwidth]{tentou_lr}
+}
+\alert{\(\Longrightarrow\)}
+\parbox[c]{.3\textwidth}{
+  \includegraphics[width=.3\textwidth]{tentou_master}}
+\end{center}
+\end{frame}
+
+\section{Problem Formulation}
+\label{sec:orgdcd11f5}
+\subsection{sparse representation}
+\label{sec:org451bfb1}
+\begin{frame}[label={sec:orgc71fa64}]{Sparse Representation}
+\begin{itemize}
+\item notation:
+\begin{itemize}
+\item dictionary:
+\(\mathbf{D}=(d_{1},d_{2},\dotsc,d_{k})\in\mathbb{R}^{p\times k}\)
+\item observation: \(\boldsymbol{y}\in R^{p}\)
+\item coefficients: \(\boldsymbol{\alpha}\in\mathbb{R}^{k}\)
+\end{itemize}
+\end{itemize}
+\medskip
+\begin{alertblock}{optimization problem}
+estimate appropriate \(\alpha\) and \(\mathbf{D}\):
+\begin{equation}
+  \mathop{\text{minimize}}_{\boldsymbol{\alpha},\mathbf{D}}
+  \|\boldsymbol{y}-\mathbf{D}\boldsymbol{\alpha}\|_{2}^{2}
+  +\eta\|\boldsymbol{\alpha}\|_{1}
+\end{equation}
+\end{alertblock}
+\end{frame}
+
+\begin{frame}[label={sec:orgfc1c14b}]{Degradation Model}
+\begin{itemize}
+\item notation:
+\begin{itemize}
+\item \(X\): high-resolution image
+\item \(Y\): low-resolution image
+\item model of degradation process:
+\begin{equation}
+  Y=\mathbb{L}\,X+\varepsilon=\mathbb{SHW}\,X+\varepsilon
+\end{equation}
+where degradation \(\mathbb{L}\) is decomposed as
+\begin{itemize}
+\item \(\mathbb{S}\): down-sampling
+\item \(\mathbb{H}\): blurring
+\item \(\mathbb{W}\): warping
+\end{itemize}
+and \(\varepsilon\) is additive noise
+\end{itemize}
+\end{itemize}
+\end{frame}
+
+\subsection{single-frame super-resolution}
+\label{sec:org99c8c99}
+\begin{frame}[label={sec:org668e201}]{Single-Frame Problem}
+\begin{itemize}
+\item hypothesis:
+\begin{itemize}
+\item single observation:
+\(Y= \mathbb{L}\,X+\varepsilon\)
+\item \(\boldsymbol{x}\): patch of \(X\)\\[0pt]
+\(\boldsymbol{y}\): corresponding patch of \(Y\)
+\item sparse representation with identical coefficients:
+\begin{align}
+  \boldsymbol{x}&=\mathbf{D}^{h}\boldsymbol{\alpha}
+                  \quad (\mathbf{D}^{h}:\text{high-resolution dictionary})\\
+  \boldsymbol{y}&=\mathbf{D}^{l}\boldsymbol{\alpha}
+                  \quad (\mathbf{D}^{l}:\text{low-resolution dictionary})\\
+                  % \alert{\boldsymbol{y}}
+                &\alert{%=\mathbf{D}_l\boldsymbol{\alpha}
+                  \simeq \mathbb{L}\boldsymbol{x} = \mathbb{L}\mathbf{D}^{h}\boldsymbol{\alpha}
+                  \quad\text{(linearity assumption)}}
+\end{align}
+\end{itemize}
+\end{itemize}
+\begin{alertblock}{problem}
+estimate of \(\boldsymbol{\alpha}\) from a low-resolution image:
+\begin{equation}
+  \mathop{\text{minimize}}_{\alpha}
+  \|\boldsymbol{y}-\mathbf{D}^{l}\boldsymbol{\alpha}\|_2^2+\eta\|\boldsymbol{\alpha}\|_1
+\end{equation}
+\end{alertblock}
+\end{frame}
+
+\begin{frame}[label={sec:orgeb15292}]{Multi-Resolution Dictionaries}
+\begin{center}
+\includegraphics[page=4,width=.8\linewidth,
+trim=140 590 140 55, clip]{Kato_etal2015}
+\end{center}
+\begin{alertblock}{key issue}
+construct good \(\mathbf{D}^{l}\) from \(\mathbf{D}^{h}\)
+\end{alertblock}
+\end{frame}
+
+\subsection{multi-frame super-resolution}
+\label{sec:org4df3663}
+\begin{frame}[label={sec:orgc56a2b9}]{Multi-Frame Problem}
+\begin{itemize}
+\item hypothesis:
+\begin{itemize}
+\item multiple observations: \(Y_1,\dotsc,Y_N\) 
+\begin{equation}
+  Y_k= \mathbb{L}_k\,X+\varepsilon_k,\quad k=1,\dotsc,N
+\end{equation}
+\item \(\boldsymbol{x}\): patch of \(X\)\\[0pt]
+\(\boldsymbol{y}_k\): corresponding patches of \(Y\)
+\item sparse representation:
+\begin{align}
+  \boldsymbol{x}&=\mathbf{D}^{h}\boldsymbol{\alpha}\\
+  \boldsymbol{y}_k&=\mathbf{D}^{l}_{k}\boldsymbol{\alpha}
+                    \simeq \mathbb{L}_{k}\,\boldsymbol{x}
+                    =\mathbb{L}_{k}\,\mathbf{D}^{h}\boldsymbol{\alpha}
+\end{align}
+\end{itemize}
+\end{itemize}
+\end{frame}
+\begin{frame}[label={sec:org449491f}]{Multi-Frame Problem}
+\begin{itemize}
+\item problem:
+\begin{itemize}
+\item estimate of \(\boldsymbol{\alpha}\) from multiple low-resolution images:
+\begin{equation}
+  \mathop{\text{minimize}}_{\alpha}
+  \|\tilde{\boldsymbol{y}}-\tilde{\mathbf{D}}^{l}\boldsymbol{\alpha}\|_2^2
+  +\eta\|\boldsymbol{\alpha}\|_1
+\end{equation}
+where \(\tilde{\mathbf{D}}\) and \(\tilde{\boldsymbol{y}}\) are stacked as
+\begin{equation}
+  \tilde{\mathbf{D}}^{l}
+  =
+  \begin{bmatrix}
+    \mathbf{D}^{l}_{1}\\\vdots\\\mathbf{D}^{l}_{N}
+  \end{bmatrix}
+  \quad\text{and}\quad
+  \tilde{\boldsymbol{y}}
+  =
+  \begin{bmatrix}
+    \boldsymbol{y}_1\\\vdots\\\boldsymbol{y}_N
+  \end{bmatrix}
+\end{equation}
+\end{itemize}
+\end{itemize}
+\end{frame}
+
+\begin{frame}[label={sec:orga00967a}]{Stacked Observations and Dictionaries}
+\begin{center}
+\includegraphics[width=.7\linewidth]{connect}
+\end{center}
+\begin{alertblock}{key issue}
+appropriately align multiple low-resolution images and dictionaries
+\end{alertblock}
+\end{frame}
+
+\begin{frame}[label={sec:org166b886}]{Block Matching}
+\begin{itemize}
+\item simple approach:
+\parencite{KatoHinoMurata2015}
+\begin{itemize}
+\item block matching with reference patch
+\begin{equation}
+  \text{estimate }\,
+  \hat{\mathbb{L}}_k =\mathbb{SH}\hat{\mathbb{W}}_{k}
+  \,\text{ s.t. }\,
+  \boldsymbol{y}_k = \hat{\mathbb{L}}_k\,\boldsymbol{x}
+\end{equation}
+\item sub-pixel accuracy method
+\parencite{ShimizuOkutomi2006}
+\end{itemize}
+\end{itemize}
+\begin{center}
+\includegraphics[width=.8\textwidth]{blockmatching}
+\end{center}
+\end{frame}
+
+\begin{frame}[label={sec:org10b0687}]{Observation Alignment}
+\begin{itemize}
+\item stacked observation:
+\begin{equation}
+  \tilde{\boldsymbol{y}}
+  =
+  \begin{bmatrix}
+    \boldsymbol{y}_{1}\\\vdots\\\boldsymbol{y}_{N}
+  \end{bmatrix}
+  \quad\text{where}\quad
+  \boldsymbol{y}_{k}
+  =\hat{\mathbb{L}}_{k}\,\boldsymbol{x}
+  =\mathbb{SH}\hat{\mathbb{W}}_{k}\,\boldsymbol{x}
+\end{equation}
+\end{itemize}
+\begin{center}
+\includegraphics[page=6,width=.8\linewidth,
+trim=150 650 140 55, clip]{Kato_etal2015}
+\end{center}
+\end{frame}
+
+\begin{frame}[label={sec:orgf9618fc}]{Dictionary Alignment}
+\begin{itemize}
+\item stacked dictionary:
+\begin{equation}
+  \tilde{\mathbf{D}}^{l}
+  =
+  \begin{bmatrix}
+    \mathbf{D}^{l}_{1}\\\vdots\\\mathbf{D}^{l}_{N}
+  \end{bmatrix}
+  \quad\text{where}\quad
+  \mathbf{D}^{l}_{k}
+  =\hat{\mathbb{L}}_k\,\mathbf{D}^{h}
+  =\mathbb{SH}\hat{\mathbb{W}}_{k}\,\mathbf{D}^{h}
+\end{equation}
+\end{itemize}
+\begin{center}
+\includegraphics[page=6,width=.6\linewidth,
+trim=150 420 140 200, clip]{Kato_etal2015}
+\end{center}
+\end{frame}
+
+\begin{frame}[label={sec:orge954e03}]{Double Sparsity}
+\begin{itemize}
+\item sparse representation approach:
+\parencite{KatoHinoMurata2017}
+\begin{itemize}
+\item prepare ``meta-dictionary''
+\item construct a dictionary 
+\begin{itemize}
+\item which is sparse combination of meta-dictionary
+\item which offers sparse representation of target observations
+\end{itemize}
+\parencite{RubinsteinZibulevskyElad2010}
+\end{itemize}
+\end{itemize}
+\end{frame}
+
+\begin{frame}[label={sec:orgd04377e}]{Multi-Frame Alignment}
+\begin{center}
+\includegraphics[page=3,width=.75\linewidth,
+trim=130 500 120 50, clip]{Kato_etal2017}
+\end{center}
+\end{frame}
+
+\begin{frame}[label={sec:org66aec86}]{Dictionary Representation}
+\begin{itemize}
+\item notation:
+\begin{itemize}
+\item dictionary for observation \(\boldsymbol{y}_{i}\):
+\begin{equation}
+  \mathbf{D}^{l}_{i}
+  = \theta_{i,(0,0)}\mathbf{D}^{l(0,0)} +
+  \theta_{i,(0,1)}\mathbf{D}^{l(0,1)} + \dotsb +
+  \theta_{i,(k,k)}\mathbf{D}^{l(k,k)}
+\end{equation}
+\item meta-dictionary matrix:
+\begin{equation}
+  \mathbf{B}
+  ={\footnotesize
+    \begin{bmatrix}
+      \mathbf{D}^l_{1} & & & & && \\
+      & \mathbf{D}^{l(0,0)} & \cdots & \mathbf{D}^{l(k,k)} & & & & & \\
+      & & & & \ddots & &  \\
+      & & & & & \mathbf{D}^{l(0,0)} &  & \cdots & \mathbf{D}^{l(k,k)}
+    \end{bmatrix}}
+\end{equation}
+\item meta-dictionary coefficient:
+\begin{equation}
+  \boldsymbol{\theta}
+  =\left[
+    1,\theta_{2,(0,0)},\dotsc,\theta_{2,(k,k)},\dotsc,
+    \theta_{N,(0,0)},\dotsc,\theta_{N,(k,k)}\right]^{\mathrm{T}}
+\end{equation}
+\end{itemize}
+\end{itemize}
+\end{frame}
+
+\begin{frame}[label={sec:org9ef7f0e}]{Double Sparsity Problem}
+\begin{itemize}
+\item objective:
+\begin{align}
+  \mathop{\text{minimize}}_{\boldsymbol{\alpha},\boldsymbol{\theta}}
+  &
+  \|\tilde{\boldsymbol{y}}-{\mathbf{B}}\;\mathrm{vec}
+  \left(\boldsymbol{\alpha}\boldsymbol{\theta}^{\mathrm{T}}\right)\|_2^2 
+  + \eta\|\boldsymbol{\alpha}\|_1\\
+  &\text{subject to }
+    \mathbf{E}\boldsymbol{\theta}\leq\mathbf{1}, 
+    \;\boldsymbol{\theta}\geq\mathbf{0}, 
+    \;\theta_{1}=1
+\end{align}
+where
+\begin{equation}
+  \mathbf{E} = \begin{bmatrix}
+    1& &      & &      & &      & \\
+     &1&\cdots&1&      & &      & \\
+     & &      & &\ddots& &      & \\
+     & &      & &      &1&\cdots&1
+  \end{bmatrix}
+\end{equation}
+\end{itemize}
+\end{frame}
+
+\begin{frame}[label={sec:org809f396}]{Alternative Optimization}
+\begin{itemize}
+\item optimization for registration:
+\begin{multline}
+  \tag{20}
+  \hat{\boldsymbol{\theta}}
+  =
+  \arg\min_{\boldsymbol{\theta}}
+  \|\tilde{\boldsymbol{y}}-{\mathbf{B}}
+  (\mathbf{I}\otimes\boldsymbol{\alpha})\boldsymbol{\theta}\|_{2}^{2} \\
+  \text{subject to }\,
+  \mathbf{E}\boldsymbol{\theta}\leq\mathbf{1},
+  \;\boldsymbol{\theta}\geq\mathbf{0}
+\end{multline}
+\item optimization for sparse representation:
+\begin{equation}
+  \tag{21}
+  \hat{\boldsymbol{\alpha}}
+  =
+  \arg\min_{\boldsymbol{\alpha}}
+  \|\tilde{\boldsymbol{y}}-{\mathbf{B}}
+  (\boldsymbol{\theta}\otimes\mathbf{I})\boldsymbol{\alpha}\|_{2}^{2}
+  +\eta\|\boldsymbol{\alpha}\|_{1}
+\end{equation}
+\end{itemize}
+\end{frame}
+
+
+\begin{frame}[label={sec:orgac7725e}]{Structure of Double Sparsity}
+\begin{center}
+\includegraphics[page=6,width=\linewidth,
+trim=120 560 120 50, clip]{Kato_etal2017}
+\end{center}
+\end{frame}
+
+\section{Illustrative Example}
+\label{sec:org94b62e3}
+\subsection{block matching}
+\label{sec:org8ae2fd0}
+\begin{frame}[label={sec:org2e8b873}]{Block Matching}
+comparison with existing works:
+\begin{itemize}
+\item ASDS \parencite{Dong_etal2011}:
+single-frame, sparse representation
+\item MF-JDL \parencite{Wang_etal2011}:
+multi-frame, sparse representation
+\item BTV \parencite{Farsiu_etal2004}:
+multi-frame, model-based
+\item LABTV \parencite{Li_etal2010}:
+multi-frame, model-based
+\item Proposed \parencite{KatoHinoMurata2015}:
+multi-frame, sparse representation, block-matching
+\end{itemize}
+\end{frame}
+
+
+\begin{frame}[label={sec:org63a85f3}]{}
+\begin{center}
+\includegraphics[page=11,width=.85\linewidth,
+trim=105 450 115 55, clip]{Kato_etal2015}
+\end{center}
+\end{frame}
+
+\begin{frame}[label={sec:org553f066}]{}
+\begin{center}
+\includegraphics[page=11,width=.85\linewidth,
+trim=105 125 115 380, clip]{Kato_etal2015}
+\end{center}
+\end{frame}
+
+\begin{frame}[label={sec:org19a3de4}]{}
+\begin{center}
+\includegraphics[page=12,width=.85\linewidth,
+trim=105 230 115 275, clip]{Kato_etal2015}
+\end{center}
+\end{frame}
+
+\begin{frame}[label={sec:orgc00745b}]{}
+\begin{center}
+\includegraphics[page=13,width=\linewidth,
+trim=105 270 115 300, clip]{Kato_etal2015}
+\end{center}
+\end{frame}
+
+\begin{frame}[label={sec:orgff7758d}]{}
+\begin{center}
+\includegraphics[page=14,width=\linewidth,
+trim=110 515 115 55, clip]{Kato_etal2015}
+\end{center}
+\end{frame}
+
+\subsection{double sparsity}
+\label{sec:orgd36acb7}
+\begin{frame}[label={sec:org5234195}]{Double Sparsity}
+comparison with existing works:
+\begin{itemize}
+\item ASDS \parencite{Dong_etal2011}:
+single-frame, sparse representation
+\item MF-JDL \parencite{Wang_etal2011}:
+multi-frame, sparse representation
+\item BTV \parencite{Farsiu_etal2004}:
+multi-frame, model-based
+\item LABTV \parencite{Li_etal2010}:
+multi-frame, model-based
+\item MF-SC \parencite{KatoHinoMurata2015}:
+multi-frame, sparse representation, block-matching
+\item Proposed \parencite{KatoHinoMurata2017}:
+multi-frame, sparse representation, double sparsity
+\end{itemize}
+\end{frame}
+
+\begin{frame}[label={sec:orgc561b09}]{}
+\begin{center}
+\includegraphics[page=7,width=.57\linewidth,
+trim=310 440 30 55, clip]{Kato_etal2017}
+\end{center}
+\end{frame}
+
+\begin{frame}[label={sec:orgcc569ab}]{}
+\begin{center}
+\includegraphics[page=7,width=.57\linewidth,
+trim=310 90 30 405, clip]{Kato_etal2017}
+\end{center}
+\end{frame}
+
+\begin{frame}[label={sec:orgf4808d9}]{}
+\begin{center}
+\includegraphics[page=8,width=.57\linewidth,
+trim=30 235 310 260, clip]{Kato_etal2017}
+\end{center}
+\end{frame}
+
+\begin{frame}[label={sec:org5a45af4}]{}
+\begin{center}
+\includegraphics[page=10,width=.72\linewidth,
+trim=30 195 305 360, clip]{Kato_etal2017}
+\end{center}
+\end{frame}
+
+\begin{frame}[label={sec:org82876e3}]{}
+\begin{center}
+\includegraphics[page=10,width=.72\linewidth,
+trim=300 195 35 360, clip]{Kato_etal2017}
+\end{center}
+\end{frame}
+
+\begin{frame}[label={sec:org426a745}]{PSNRs and Computational Times}
+\begin{center}
+\scalebox{0.9}{
+  \begin{tabular}{c|cccccccc} \hline
+    & SF-JDL & ASDS & MF-JDL & BTV & LABTV & MF-SC &Proposed \\ \hline
+    MacArthur & 34.33  & 35.63   & 35.18 &
+                                           34.39  & 34.40  & 34.79  & 35.63\\
+    & (2.69) & (178.08)  & (133.78) & (61.72) & (96.17) &  (27.70) & (61.74)\\
+
+    Samurai & 25.97 & 26.66  & 26.12 & 26.16
+                                   & 26.07 & 25.90 & 26.49\\ 
+    & (2.50) & (211.65)  & (138.38) &  (62.13) &  (96.24) &  (30.75) &(59.86)\\\hline
+  \end{tabular}
+}
+\bigskip
+{
+  \footnotesize
+  \begin{align}
+    &\mathrm{PSNR}\text{[dB]} 
+    =10\log_{10}\frac{255^2}{\mathrm{MSE}}\\
+    &\text{computational times[sec] (in parentheses)}      
+  \end{align}
+}
+\end{center}
+\end{frame}
+
+\section{Conclusion}
+\label{sec:org7c3d54e}
+\begin{frame}[label={sec:orgea66f6d}]{Concluding Remarks}
+we have investigated
+\begin{itemize}
+\item multi-frame super resolution method based on sparse representation
+\item registration performance of sub-pixel block matching and double sparsity
+\end{itemize}
+
+
+practical applications would be
+\begin{itemize}
+\item old or historic movies
+\item medical images
+\end{itemize}
+which consist of a number of low-resolution images
+\end{frame}
+
+\begin{frame}[allowframebreaks]{References}
+\printbibliography[heading=none]
+\end{frame}
+\end{document}

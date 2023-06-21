@@ -1,0 +1,595 @@
+#+TITLE: Image Super-Resolution with Sparse Coding
+#+SUBTITLE: image representaion and registration
+#+AUTHOR: Noboru Murata
+#+EMAIL: noboru.murata@gmail.com
+#+DATE: \today
+#+DESCRIPTION: based on Kato et al (20/20), doi:10.1162/089976604323057452
+#+KEYWORDS: multi-frame super-resolution
+#+LANGUAGE: en
+#+STARTUP: beamer hidestars content indent
+:BEAMER:
+#+OPTIONS: H:3 num:t toc:t \n:nil @:t ::t |:t ^:t -:t f:t *:t <:t
+#+OPTIONS: TeX:t LaTeX:t skip:nil d:nil todo:t pri:nil tags:not-in-toc
+# #+INFOJS_OPT: view:nil toc:nil ltoc:t mouse:underline buttons:0 path:https://orgmode.org/org-info.js
+#+EXPORT_SELECT_TAGS: export
+#+EXPORT_EXCLUDE_TAGS: noexport
+#+HTML_LINK_UP:
+#+HTML_LINK_HOME:
+#+LaTeX_CLASS: beamer
+#+LaTeX_CLASS_OPTIONS: [fleqn,aspectratio=1610]
+#+BEAMER_HEADER: \usepackage[toc=none]{mytalk}
+# #+BEAMER_HEADER: \usepackage[toc=none,font=heavy]{mytalk}
+#+BEAMER_HEADER: \addbibresource{papers.bib}
+#+BEAMER_HEADER: \graphicspath{{figs/}{refs/}{figs/tentou/}{figs/lena/}{figs/cameraman/}{figs/flower/}{figs/girl/},{figs/parthenon/}{figs/macarthur/}{figs/samurai/}{figs/heading/}}
+#+BEAMER_HEADER: \DeclareGraphicsExtensions{.pdf,.png,.eps,.jpg}
+#+BEAMER_HEADER: \institute{\url{https://noboru-murata.github.io/}}
+# #+BEAMER_HEADER: \institute[WASEDA]{Waseda University\\\url{https://noboru-murata.github.io/}}
+# #+BEAMER_HEADER: \titlegraphic{\includegraphics[height=1.5cm]{symbol_waseda_3.jpg}
+# #+BEAMER_HEADER:    \includegraphics[height=1.5cm,viewport=0 0 150 150,clip]{UTlogo.jpg}
+# #+BEAMER_HEADER:    \includegraphics[height=1.5cm]{nict-logo-new2.png}}
+# #+BEAMER_HEADER: \myLogo{\lower9pt\hbox{
+# #+BEAMER_HEADER:    \reflectbox{\includegraphics[height=26pt]{milk_gray.png}}
+# #+BEAMER_HEADER:    \kern-8pt\includegraphics[height=18pt,width=22pt]{milk_sepia.png}}}
+#+COLUMNS: "%45ITEM %10BEAMER_env(Env) %10BEAMER_act(Act) %4BEAMER_col(Col) %8BEAMER_opt(Opt)"
+# column view: C-c C-x C-c / C-c C-c or q
+# beamer block: C-c C-b
+:END:
+
+* Introduction
+** background
+*** Background
+request for image processing:
+- development of new devices
+- re-mastering of histrical images
+#+begin_center
+#+begin_export latex
+\includegraphics[page=2,width=.9\linewidth,%
+trim=110 580 110 55,clip]{Kato_etal2015}
+#+end_export
+#+end_center
+# \begin{center}
+#   \includegraphics[page=1,width=.7\textwidth]{sr_example}\\
+#   development of new devices\\[20pt]
+#   \includegraphics[page=2,width=.7\textwidth]{sr_example}\\
+#   re-mastering of histrical images
+
+*** Image Super-Resolution
+- problem:
+  - restore a clear image from low-resolution images
+  - consider degradation caused by
+    - noise
+    - blur
+    - down-sampling
+- typical setup:
+  - single-frame: one low-resolution image
+  - *multi-frame*: 
+    multiple low-resolution images with different degradation
+    processes 
+- typical approaches:
+  - model-based: e.g. random Markov field
+  - *example-based*: e.g. sparse representation
+
+** single-frame vs multi-frame
+*** Single-Frame vs Multi-Frame
+**** left                                                          :BMCOL:
+:PROPERTIES:
+:BEAMER_col: 0.43
+:END:
+#+begin_center
+\includegraphics[page=3,width=.95\textwidth]{sr_example} \\
+single-frame super-resolution
+#+end_center
+**** right                                                         :BMCOL:
+:PROPERTIES:
+:BEAMER_col: 0.57
+:END:
+#+begin_center
+\includegraphics[page=4,width=.95\textwidth]{sr_example} \\
+multi-frame super-resolution
+#+end_center
+
+*** Multi-Frame Image Super-Resolution
+#+begin_center
+#+begin_export latex
+\parbox[c]{.56\textwidth}{
+  \includegraphics[page=1,width=.18\textwidth]{tentou_lr}
+  \includegraphics[page=2,width=.18\textwidth]{tentou_lr}
+  \includegraphics[page=3,width=.18\textwidth]{tentou_lr}\\
+  \includegraphics[page=4,width=.18\textwidth]{tentou_lr}
+  \includegraphics[page=5,width=.18\textwidth]{tentou_lr}
+  \includegraphics[page=6,width=.18\textwidth]{tentou_lr}\\
+  \includegraphics[page=7,width=.18\textwidth]{tentou_lr}
+  \includegraphics[page=8,width=.18\textwidth]{tentou_lr}
+  \includegraphics[page=9,width=.18\textwidth]{tentou_lr}
+}
+\alert{\(\Longrightarrow\)}
+\parbox[c]{.3\textwidth}{
+  \includegraphics[width=.3\textwidth]{tentou_master}}
+#+end_export
+#+end_center
+
+* Problem Formulation
+** sparse representation
+*** Sparse Representation
+- notation:
+  - dictionary:
+    \(\mathbf{D}=(d_{1},d_{2},\dotsc,d_{k})\in\mathbb{R}^{p\times k}\)
+  - observation: \(\boldsymbol{y}\in R^{p}\)
+  - coefficients: \(\boldsymbol{\alpha}\in\mathbb{R}^{k}\)
+#+BEAMER: \medskip
+**** optimization problem                                   :B_alertblock:
+:PROPERTIES:
+:BEAMER_env: alertblock
+:END:
+estimate appropriate \(\alpha\) and \(\mathbf{D}\):
+\begin{equation}
+  \mathop{\text{minimize}}_{\boldsymbol{\alpha},\mathbf{D}}
+  \|\boldsymbol{y}-\mathbf{D}\boldsymbol{\alpha}\|_{2}^{2}
+  +\eta\|\boldsymbol{\alpha}\|_{1}
+\end{equation}
+
+*** COMMENT sparse coding in computer vision
+#+begin_center
+#+begin_export latex
+\includegraphics<+| handout:0>[page=1,width=\linewidth]{sparsecoding}%
+\includegraphics<+| handout:0>[page=2,width=\linewidth]{sparsecoding}%
+\includegraphics<+| handout:1>[page=3,width=\linewidth]{sparsecoding}%
+#+end_export
+#+end_center
+
+*** Degradation Model
+- notation:
+  - \(X\): high-resolution image
+  - \(Y\): low-resolution image
+  - model of degradation process:
+    \begin{equation}
+      Y=\mathbb{L}\,X+\varepsilon=\mathbb{SHW}\,X+\varepsilon
+    \end{equation}
+    where degradation \(\mathbb{L}\) is decomposed as
+    - \(\mathbb{S}\): down-sampling
+    - \(\mathbb{H}\): blurring
+    - \(\mathbb{W}\): warping
+    and \(\varepsilon\) is additive noise
+
+** single-frame super-resolution
+*** Single-Frame Problem
+- hypothesis:
+  - single observation:
+    \(Y= \mathbb{L}\,X+\varepsilon\)
+    # \begin{equation}
+    #   Y= \mathbb{L}\,X+\varepsilon
+    # \end{equation}
+  - \(\boldsymbol{x}\): patch of \(X\)\\
+    \(\boldsymbol{y}\): corresponding patch of \(Y\)
+  - sparse representation with identical coefficients:
+    \begin{align}
+      \boldsymbol{x}&=\mathbf{D}^{h}\boldsymbol{\alpha}
+                      \quad (\mathbf{D}^{h}:\text{high-resolution dictionary})\\
+      \boldsymbol{y}&=\mathbf{D}^{l}\boldsymbol{\alpha}
+                      \quad (\mathbf{D}^{l}:\text{low-resolution dictionary})\\
+                      % \alert{\boldsymbol{y}}
+                    &\alert{%=\mathbf{D}_l\boldsymbol{\alpha}
+                      \simeq \mathbb{L}\boldsymbol{x} = \mathbb{L}\mathbf{D}^{h}\boldsymbol{\alpha}
+                      \quad\text{(linearity assumption)}}
+    \end{align}
+    # \alert{assumption: degradation operates linearly}
+    # assumption SHW: linear operator
+    # \begin{equation}
+    #  \mathbf{D}_l\simeq L\mathbf{D}_h
+    # \end{equation}
+    # \begin{equation}
+    #   \boldsymbol{y}=\mathbf{D}_l\boldsymbol{\alpha}
+    #   \simeq L\boldsymbol{x} = L\mathbf{D}_h\boldsymbol{\alpha} 
+    # \end{equation}
+**** problem                                                :B_alertblock:
+:PROPERTIES:
+:BEAMER_env: alertblock
+:END:
+estimate of \(\boldsymbol{\alpha}\) from a low-resolution image:
+\begin{equation}
+  \mathop{\text{minimize}}_{\alpha}
+  \|\boldsymbol{y}-\mathbf{D}^{l}\boldsymbol{\alpha}\|_2^2+\eta\|\boldsymbol{\alpha}\|_1
+\end{equation}
+
+*** Multi-Resolution Dictionaries
+#+begin_center
+#+begin_export latex
+\includegraphics[page=4,width=.8\linewidth,
+trim=140 590 140 55, clip]{Kato_etal2015}
+#+end_export
+#+end_center
+**** key issue                                              :B_alertblock:
+:PROPERTIES:
+:BEAMER_env: alertblock
+:END:
+construct good \(\mathbf{D}^{l}\) from \(\mathbf{D}^{h}\)
+
+** multi-frame super-resolution
+*** Multi-Frame Problem
+- hypothesis:
+  - multiple observations: \(Y_1,\dotsc,Y_N\) 
+    \begin{equation}
+      Y_k= \mathbb{L}_k\,X+\varepsilon_k,\quad k=1,\dotsc,N
+    \end{equation}
+  - \(\boldsymbol{x}\): patch of \(X\)\\
+    \(\boldsymbol{y}_k\): corresponding patches of \(Y\)
+  - sparse representation:
+    \begin{align}
+      \boldsymbol{x}&=\mathbf{D}^{h}\boldsymbol{\alpha}\\
+      \boldsymbol{y}_k&=\mathbf{D}^{l}_{k}\boldsymbol{\alpha}
+                        \simeq \mathbb{L}_{k}\,\boldsymbol{x}
+                        =\mathbb{L}_{k}\,\mathbf{D}^{h}\boldsymbol{\alpha}
+    \end{align}
+    # - problem: how to combine multiple low-resolution images
+    #   - construct \(D_{lk}\) from \(D_h\)
+    #   - align \(y_k\)
+*** Multi-Frame Problem
+- problem:
+  - estimate of \(\boldsymbol{\alpha}\) from multiple low-resolution images:
+    \begin{equation}
+      \mathop{\text{minimize}}_{\alpha}
+      \|\tilde{\boldsymbol{y}}-\tilde{\mathbf{D}}^{l}\boldsymbol{\alpha}\|_2^2
+      +\eta\|\boldsymbol{\alpha}\|_1
+    \end{equation}
+    where \(\tilde{\mathbf{D}}\) and \(\tilde{\boldsymbol{y}}\) are stacked as
+    \begin{equation}
+      \tilde{\mathbf{D}}^{l}
+      =
+      \begin{bmatrix}
+        \mathbf{D}^{l}_{1}\\\vdots\\\mathbf{D}^{l}_{N}
+      \end{bmatrix}
+      \quad\text{and}\quad
+      \tilde{\boldsymbol{y}}
+      =
+      \begin{bmatrix}
+        \boldsymbol{y}_1\\\vdots\\\boldsymbol{y}_N
+      \end{bmatrix}
+    \end{equation}
+  # if we successfully align observations and dictionaries,
+  # we can simply solve:
+
+*** Stacked Observations and Dictionaries
+#+begin_center
+\includegraphics[width=.7\linewidth]{connect}
+#+end_center
+**** key issue                                              :B_alertblock:
+:PROPERTIES:
+:BEAMER_env: alertblock
+:END:
+appropriately align multiple low-resolution images and dictionaries
+# - *problem*: 
+#   - construct \(D_{lk}\) from \(D_h\)
+#   - align \(y_k\)
+
+*** Block Matching
+- simple approach:
+  \parencite{KatoHinoMurata2015}
+  - block matching with reference patch
+    \begin{equation}
+      \text{estimate }\,
+      \hat{\mathbb{L}}_k =\mathbb{SH}\hat{\mathbb{W}}_{k}
+      \,\text{ s.t. }\,
+      \boldsymbol{y}_k = \hat{\mathbb{L}}_k\,\boldsymbol{x}
+    \end{equation}
+  - sub-pixel accuracy method
+    \parencite{ShimizuOkutomi2006}
+#+begin_center
+\includegraphics[width=.8\textwidth]{blockmatching}
+#+end_center
+
+*** Observation Alignment
+- stacked observation:
+  \begin{equation}
+    \tilde{\boldsymbol{y}}
+    =
+    \begin{bmatrix}
+      \boldsymbol{y}_{1}\\\vdots\\\boldsymbol{y}_{N}
+    \end{bmatrix}
+    \quad\text{where}\quad
+    \boldsymbol{y}_{k}
+    =\hat{\mathbb{L}}_{k}\,\boldsymbol{x}
+    =\mathbb{SH}\hat{\mathbb{W}}_{k}\,\boldsymbol{x}
+  \end{equation}
+#+begin_center
+#+begin_export latex
+\includegraphics[page=6,width=.8\linewidth,
+trim=150 650 140 55, clip]{Kato_etal2015}
+#+end_export
+#+end_center
+
+*** Dictionary Alignment
+- stacked dictionary:
+  \begin{equation}
+    \tilde{\mathbf{D}}^{l}
+    =
+    \begin{bmatrix}
+      \mathbf{D}^{l}_{1}\\\vdots\\\mathbf{D}^{l}_{N}
+    \end{bmatrix}
+    \quad\text{where}\quad
+    \mathbf{D}^{l}_{k}
+    =\hat{\mathbb{L}}_k\,\mathbf{D}^{h}
+    =\mathbb{SH}\hat{\mathbb{W}}_{k}\,\mathbf{D}^{h}
+  \end{equation}
+#+begin_center
+#+begin_export latex
+\includegraphics[page=6,width=.6\linewidth,
+trim=150 420 140 200, clip]{Kato_etal2015}
+#+end_export
+#+end_center
+
+*** Double Sparsity
+- sparse representation approach:
+  \parencite{KatoHinoMurata2017}
+  - prepare ``meta-dictionary''
+  - construct a dictionary 
+    - which is sparse combination of meta-dictionary
+    - which offers sparse representation of target observations
+    \parencite{RubinsteinZibulevskyElad2010}
+
+*** Multi-Frame Alignment
+#+begin_center
+#+begin_export latex
+\includegraphics[page=3,width=.75\linewidth,
+trim=130 500 120 50, clip]{Kato_etal2017}
+#+end_export
+#+end_center
+
+*** COMMENT structured meta-dictionary
+#+begin_center
+#+begin_export latex
+\includegraphics<+| handout:0>[page=1,width=\linewidth]{HR_shift}%
+\includegraphics<+| handout:0>[page=2,width=\linewidth]{HR_shift}%
+\includegraphics<+| handout:0>[page=3,width=\linewidth]{HR_shift}%
+\includegraphics<+| handout:0>[page=4,width=\linewidth]{HR_shift}%
+\includegraphics<+| handout:0>[page=5,width=\linewidth]{HR_shift}%
+\includegraphics<+| handout:0>[page=6,width=\linewidth]{HR_shift}%
+\includegraphics<+| handout:1>[page=7,width=\linewidth]{HR_shift}%
+#+end_export
+#+end_center
+
+*** Dictionary Representation
+- notation:
+  - dictionary for observation \(\boldsymbol{y}_{i}\):
+    \begin{equation}
+      \mathbf{D}^{l}_{i}
+      = \theta_{i,(0,0)}\mathbf{D}^{l(0,0)} +
+      \theta_{i,(0,1)}\mathbf{D}^{l(0,1)} + \dotsb +
+      \theta_{i,(k,k)}\mathbf{D}^{l(k,k)}
+    \end{equation}
+  - meta-dictionary matrix:
+    \begin{equation}
+      \mathbf{B}
+      ={\footnotesize
+        \begin{bmatrix}
+          \mathbf{D}^l_{1} & & & & && \\
+          & \mathbf{D}^{l(0,0)} & \cdots & \mathbf{D}^{l(k,k)} & & & & & \\
+          & & & & \ddots & &  \\
+          & & & & & \mathbf{D}^{l(0,0)} &  & \cdots & \mathbf{D}^{l(k,k)}
+        \end{bmatrix}}
+    \end{equation}
+  - meta-dictionary coefficient:
+    \begin{equation}
+      \boldsymbol{\theta}
+      =\left[
+        1,\theta_{2,(0,0)},\dotsc,\theta_{2,(k,k)},\dotsc,
+        \theta_{N,(0,0)},\dotsc,\theta_{N,(k,k)}\right]^{\mathrm{T}}
+    \end{equation}
+
+*** Double Sparsity Problem
+- objective:
+  \begin{align}
+    \mathop{\text{minimize}}_{\boldsymbol{\alpha},\boldsymbol{\theta}}
+    &
+    \|\tilde{\boldsymbol{y}}-{\mathbf{B}}\;\mathrm{vec}
+    \left(\boldsymbol{\alpha}\boldsymbol{\theta}^{\mathrm{T}}\right)\|_2^2 
+    + \eta\|\boldsymbol{\alpha}\|_1\\
+    &\text{subject to }
+      \mathbf{E}\boldsymbol{\theta}\leq\mathbf{1}, 
+      \;\boldsymbol{\theta}\geq\mathbf{0}, 
+      \;\theta_{1}=1
+  \end{align}
+  where
+  \begin{equation}
+    \mathbf{E} = \begin{bmatrix}
+      1& &      & &      & &      & \\
+       &1&\cdots&1&      & &      & \\
+       & &      & &\ddots& &      & \\
+       & &      & &      &1&\cdots&1
+    \end{bmatrix}
+  \end{equation}
+
+*** Alternative Optimization
+- optimization for registration:
+  \begin{multline}
+    \tag{20}
+    \hat{\boldsymbol{\theta}}
+    =
+    \arg\min_{\boldsymbol{\theta}}
+    \|\tilde{\boldsymbol{y}}-{\mathbf{B}}
+    (\mathbf{I}\otimes\boldsymbol{\alpha})\boldsymbol{\theta}\|_{2}^{2} \\
+    \text{subject to }\,
+    \mathbf{E}\boldsymbol{\theta}\leq\mathbf{1},
+    \;\boldsymbol{\theta}\geq\mathbf{0}
+  \end{multline}
+- optimization for sparse representation:
+  \begin{equation}
+    \tag{21}
+    \hat{\boldsymbol{\alpha}}
+    =
+    \arg\min_{\boldsymbol{\alpha}}
+    \|\tilde{\boldsymbol{y}}-{\mathbf{B}}
+    (\boldsymbol{\theta}\otimes\mathbf{I})\boldsymbol{\alpha}\|_{2}^{2}
+    +\eta\|\boldsymbol{\alpha}\|_{1}
+  \end{equation}
+
+
+*** Structure of Double Sparsity
+#+begin_center
+#+begin_export latex
+\includegraphics[page=6,width=\linewidth,
+trim=120 560 120 50, clip]{Kato_etal2017}
+#+end_export
+#+end_center
+
+* Illustrative Example
+** block matching
+*** Block Matching
+comparison with existing works:
+- ASDS \parencite{Dong_etal2011}:
+  single-frame, sparse representation
+- MF-JDL \parencite{Wang_etal2011}:
+  multi-frame, sparse representation
+- BTV \parencite{Farsiu_etal2004}:
+  multi-frame, model-based
+- LABTV \parencite{Li_etal2010}:
+  multi-frame, model-based
+- Proposed \parencite{KatoHinoMurata2015}:
+  multi-frame, sparse representation, block-matching
+
+
+*** 
+#+begin_center
+#+begin_export latex
+\includegraphics[page=11,width=.85\linewidth,
+trim=105 450 115 55, clip]{Kato_etal2015}
+#+end_export
+#+end_center
+
+*** 
+#+begin_center
+#+begin_export latex
+\includegraphics[page=11,width=.85\linewidth,
+trim=105 125 115 380, clip]{Kato_etal2015}
+#+end_export
+#+end_center
+
+*** 
+#+begin_center
+#+begin_export latex
+\includegraphics[page=12,width=.85\linewidth,
+trim=105 230 115 275, clip]{Kato_etal2015}
+#+end_export
+#+end_center
+
+*** 
+#+begin_center
+#+begin_export latex
+\includegraphics[page=13,width=\linewidth,
+trim=105 270 115 300, clip]{Kato_etal2015}
+#+end_export
+#+end_center
+
+*** 
+#+begin_center
+#+begin_export latex
+\includegraphics[page=14,width=\linewidth,
+trim=110 515 115 55, clip]{Kato_etal2015}
+#+end_export
+#+end_center
+
+** double sparsity
+*** Double Sparsity
+comparison with existing works:
+- ASDS \parencite{Dong_etal2011}:
+  single-frame, sparse representation
+- MF-JDL \parencite{Wang_etal2011}:
+  multi-frame, sparse representation
+- BTV \parencite{Farsiu_etal2004}:
+  multi-frame, model-based
+- LABTV \parencite{Li_etal2010}:
+  multi-frame, model-based
+- MF-SC \parencite{KatoHinoMurata2015}:
+  multi-frame, sparse representation, block-matching
+- Proposed \parencite{KatoHinoMurata2017}:
+  multi-frame, sparse representation, double sparsity
+
+*** 
+#+begin_center
+#+begin_export latex
+\includegraphics[page=7,width=.57\linewidth,
+trim=310 440 30 55, clip]{Kato_etal2017}
+#+end_export
+#+end_center
+
+*** 
+#+begin_center
+#+begin_export latex
+\includegraphics[page=7,width=.57\linewidth,
+trim=310 90 30 405, clip]{Kato_etal2017}
+#+end_export
+#+end_center
+
+*** 
+#+begin_center
+#+begin_export latex
+\includegraphics[page=8,width=.57\linewidth,
+trim=30 235 310 260, clip]{Kato_etal2017}
+#+end_export
+#+end_center
+
+*** 
+#+begin_center
+#+begin_export latex
+\includegraphics[page=10,width=.72\linewidth,
+trim=30 195 305 360, clip]{Kato_etal2017}
+#+end_export
+#+end_center
+
+*** 
+#+begin_center
+#+begin_export latex
+\includegraphics[page=10,width=.72\linewidth,
+trim=300 195 35 360, clip]{Kato_etal2017}
+#+end_export
+#+end_center
+
+*** PSNRs and Computational Times
+# PSNRs and computational times (in parentheses):
+# of SR methods applied to movie data
+#+begin_center
+#+begin_export latex
+\scalebox{0.9}{
+  \begin{tabular}{c|cccccccc} \hline
+    & SF-JDL & ASDS & MF-JDL & BTV & LABTV & MF-SC &Proposed \\ \hline
+    MacArthur & 34.33  & 35.63   & 35.18 &
+                                           34.39  & 34.40  & 34.79  & 35.63\\
+    & (2.69) & (178.08)  & (133.78) & (61.72) & (96.17) &  (27.70) & (61.74)\\
+
+    Samurai & 25.97 & 26.66  & 26.12 & 26.16
+                                   & 26.07 & 25.90 & 26.49\\ 
+    & (2.50) & (211.65)  & (138.38) &  (62.13) &  (96.24) &  (30.75) &(59.86)\\\hline
+  \end{tabular}
+}
+\bigskip
+{
+  \footnotesize
+  \begin{align}
+    &\mathrm{PSNR}\text{[dB]} 
+    =10\log_{10}\frac{255^2}{\mathrm{MSE}}\\
+    &\text{computational times[sec] (in parentheses)}      
+  \end{align}
+}
+#+end_export
+#+end_center
+
+* Conclusion
+*** Concluding Remarks
+we have investigated
+- multi-frame super resolution method based on sparse representation
+- registration performance of sub-pixel block matching and double sparsity
+
+
+practical applications would be
+- old or historic movies
+- medical images
+which consist of a number of low-resolution images
+
+*** References
+:PROPERTIES:
+:BEAMER_opt: allowframebreaks
+:END:
+\printbibliography[heading=none]
+
+* COMMENT File Local Variables
+# Local Variables:
+# End:
